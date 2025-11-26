@@ -1,1 +1,1 @@
-web: gunicorn dashboard_advanced:server --bind 0.0.0.0:$PORT
+web: python dashboard_advanced.py
