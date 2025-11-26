@@ -2,7 +2,7 @@
 dashboard_advanced_sophisticated.py
 Dashboard super avanzado con múltiples funciones
 """
-
+import os
 import pandas as pd
 import numpy as np
 import plotly.express as px
