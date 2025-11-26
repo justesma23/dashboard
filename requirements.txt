@@ -1,7 +1,8 @@
-setuptools==68.2.2
+setuptools==65.5.0
+wheel==0.38.4
 dash==2.14.1
 pandas==2.0.3
 plotly==5.15.0
 dash-bootstrap-components==1.5.0
 flask==2.3.3
-numpy==1.25.2
+numpy==1.24.3
