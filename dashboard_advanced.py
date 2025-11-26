@@ -1,6 +1,6 @@
 """
-dashboard_advanced_sophisticated.py
-Dashboard super avanzado con múltiples funciones
+dashboard_advanced.py - VERSIÓN CORREGIDA SIN scikit-learn
+Dashboard avanzado para diabetes - Solo visualizaciones
 """
 
 import pandas as pd
@@ -8,52 +8,66 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from dash import Dash, dcc, html, Input, Output, State, callback_context
+from dash import Dash, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 from datetime import datetime
-import scipy.stats as stats
 
+# ========== CONFIGURACIÓN ==========
 # Cargar datos
 df = pd.read_csv("diabetes_dataset_mini.csv")
 
-# ========== CONFIGURACIÓN AVANZADA ==========
+# Preprocesamiento básico
+def preprocess_data(df):
+    """Limpieza básica de datos"""
+    df_clean = df.copy()
+    # Reemplazar ceros por mediana en columnas clínicas
+    zero_cols = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
+    for col in zero_cols:
+        if col in df_clean.columns:
+            median_val = df_clean.loc[df_clean[col] > 0, col].median()
+            df_clean[col] = df_clean[col].replace(0, median_val)
+    return df_clean
+
+df = preprocess_data(df)
+
+# ========== APP DASH ==========
 app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+server = app.server
 app.title = "🏥 Medical Analytics Dashboard"
 
-# ========== LAYOUT SUPER MEJORADO ==========
+# ========== LAYOUT MEJORADO ==========
 app.layout = dbc.Container([
-    # HEADER CON LOGO Y FECHA
+    # HEADER
     dbc.Row([
         dbc.Col([
             html.Div([
                 html.H1("🏥 MEDICAL ANALYTICS DASHBOARD", 
                        className="text-center text-white mb-1",
                        style={'fontWeight': 'bold', 'fontSize': '2.5rem'}),
-                html.P("Sistema de Monitoreo y Predicción de Diabetes", 
+                html.P("Sistema de Monitoreo y Análisis de Diabetes", 
                       className="text-center text-light mb-4",
                       style={'fontSize': '1.2rem'})
             ])
         ], width=12)
     ], className="bg-primary rounded-top p-3"),
     
-    # ALERTA DE ACTUALIZACIÓN EN TIEMPO REAL
+    # ALERTA DE ACTUALIZACIÓN
     dbc.Row([
         dbc.Col([
             dbc.Alert([
-                html.Span("🔄 Actualizado: "),
+                html.Span("🔄 Última actualización: "),
                 html.Span(id="live-update-time", className="fw-bold")
             ], color="info", className="text-center py-2")
         ], width=12)
     ]),
     
-    # PRIMERA FILA: KPI CARDS CON ANIMACIONES
+    # KPI CARDS
     dbc.Row([
         dbc.Col(dbc.Card([
             dbc.CardBody([
                 html.Div("👥", className="text-center fs-1 mb-2"),
                 html.H4(id="total-patients", className="card-title text-center"),
-                html.P("Total Pacientes", className="card-text text-center"),
-                dbc.Progress(id="progress-total", value=100, color="primary", className="mt-2")
+                html.P("Total Pacientes", className="card-text text-center")
             ])
         ], color="primary", inverse=True), md=2),
         
@@ -61,8 +75,7 @@ app.layout = dbc.Container([
             dbc.CardBody([
                 html.Div("🩺", className="text-center fs-1 mb-2"),
                 html.H4(id="diabetes-cases", className="card-title text-center"),
-                html.P("Casos Diabetes", className="card-text text-center"),
-                dbc.Progress(id="progress-cases", value=45, color="danger", className="mt-2")
+                html.P("Casos Diabetes", className="card-text text-center")
             ])
         ], color="danger", inverse=True), md=2),
         
@@ -70,8 +83,7 @@ app.layout = dbc.Container([
             dbc.CardBody([
                 html.Div("📊", className="text-center fs-1 mb-2"),
                 html.H4(id="diabetes-rate", className="card-title text-center"),
-                html.P("Tasa Incidencia", className="card-text text-center"),
-                html.Div(id="trend-indicator", className="text-center")
+                html.P("Tasa Incidencia", className="card-text text-center")
             ])
         ], color="warning", inverse=True), md=2),
         
@@ -79,8 +91,7 @@ app.layout = dbc.Container([
             dbc.CardBody([
                 html.Div("📈", className="text-center fs-1 mb-2"),
                 html.H4(id="avg-glucose", className="card-title text-center"),
-                html.P("Glucosa Promedio", className="card-text text-center"),
-                html.Small(id="glucose-status", className="text-center d-block")
+                html.P("Glucosa Promedio", className="card-text text-center")
             ])
         ], color="info", inverse=True), md=2),
         
@@ -88,8 +99,7 @@ app.layout = dbc.Container([
             dbc.CardBody([
                 html.Div("⚖️", className="text-center fs-1 mb-2"),
                 html.H4(id="avg-bmi", className="card-title text-center"),
-                html.P("IMC Promedio", className="card-text text-center"),
-                html.Small(id="bmi-status", className="text-center d-block")
+                html.P("IMC Promedio", className="card-text text-center")
             ])
         ], color="success", inverse=True), md=2),
         
@@ -97,13 +107,12 @@ app.layout = dbc.Container([
             dbc.CardBody([
                 html.Div("🎯", className="text-center fs-1 mb-2"),
                 html.H4(id="risk-score", className="card-title text-center"),
-                html.P("Score de Riesgo", className="card-text text-center"),
-                dbc.Progress(id="progress-risk", value=65, color="warning", className="mt-2")
+                html.P("Score de Riesgo", className="card-text text-center")
             ])
         ], color="secondary", inverse=True), md=2),
     ], className="mb-4"),
     
-    # SEGUNDA FILA: FILTROS AVANZADOS
+    # FILTROS AVANZADOS
     dbc.Row([
         dbc.Col([
             dbc.Card([
@@ -194,7 +203,7 @@ app.layout = dbc.Container([
                             dbc.Button("🔄 Actualizar Dashboard", id="update-btn", color="primary", size="lg", className="w-100")
                         ], md=6),
                         dbc.Col([
-                            dbc.Button("📊 Generar Reporte", id="report-btn", color="success", size="lg", className="w-100")
+                            dbc.Button("📊 Exportar Datos", id="export-btn", color="success", size="lg", className="w-100")
                         ], md=6),
                     ], className="mt-3")
                 ])
@@ -202,17 +211,15 @@ app.layout = dbc.Container([
         ], width=12)
     ], className="mb-4"),
     
-    # TERCERA FILA: GRÁFICOS PRINCIPALES
+    # GRÁFICOS PRINCIPALES
     dbc.Row([
-        # Gráfico 1: Distribución con subplots
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader("📊 Distribución de Pacientes", className="bg-dark text-white"),
+                dbc.CardHeader("📊 Distribución de Variables Clínicas", className="bg-dark text-white"),
                 dbc.CardBody(dcc.Graph(id="distribution-plot"))
             ])
         ], md=6),
         
-        # Gráfico 2: Correlación avanzada
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader("🕸️ Mapa de Correlación Avanzado", className="bg-dark text-white"),
@@ -221,17 +228,15 @@ app.layout = dbc.Container([
         ], md=6),
     ], className="mb-4"),
     
-    # CUARTA FILA: GRÁFICOS SECUNDARIOS
+    # GRÁFICOS SECUNDARIOS
     dbc.Row([
-        # Gráfico 3: Scatter matrix
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader("🎯 Matriz de Dispersión", className="bg-dark text-white"),
-                dbc.CardBody(dcc.Graph(id="scatter-matrix"))
+                dbc.CardHeader("🎯 Análisis por Grupos", className="bg-dark text-white"),
+                dbc.CardBody(dcc.Graph(id="group-analysis"))
             ])
         ], md=6),
         
-        # Gráfico 4: Box plots avanzados
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader("📦 Análisis de Distribución", className="bg-dark text-white"),
@@ -240,7 +245,7 @@ app.layout = dbc.Container([
         ], md=6),
     ], className="mb-4"),
     
-    # QUINTA FILA: ANÁLISIS ESTADÍSTICO
+    # ANÁLISIS ESTADÍSTICO
     dbc.Row([
         dbc.Col([
             dbc.Card([
@@ -248,21 +253,24 @@ app.layout = dbc.Container([
                 dbc.CardBody([
                     dbc.Row([
                         dbc.Col(html.Div(id="stats-summary"), md=6),
-                        dbc.Col(dcc.Graph(id="probability-plot"), md=6),
+                        dbc.Col(dcc.Graph(id="scatter-plot"), md=6),
                     ])
                 ])
             ])
         ], width=12)
     ], className="mb-4"),
     
-    # SEXTA FILA: TABLA INTERACTIVA
+    # TABLA INTERACTIVA
     dbc.Row([
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader("📋 Datos en Tiempo Real", className="bg-dark text-white"),
                 dbc.CardBody([
                     html.Div(id="data-table"),
-                    dbc.Pagination(id="pagination", max_value=5, active_page=1, className="mt-3")
+                    html.Div([
+                        dbc.Button("⬅️ Anterior", id="prev-btn", color="outline-primary", className="me-2"),
+                        dbc.Button("Siguiente ➡️", id="next-btn", color="outline-primary"),
+                    ], className="text-center mt-3")
                 ])
             ])
         ], width=12)
@@ -273,14 +281,34 @@ app.layout = dbc.Container([
         dbc.Col([
             html.Footer([
                 html.Hr(),
-                html.P("🏥 Medical Analytics Dashboard v2.0 | © 2024 Sistema de Monitoreo de Diabetes", 
+                html.P("🏥 Medical Analytics Dashboard v2.0 | Sistema de Análisis de Diabetes", 
                       className="text-center text-muted")
             ])
         ], width=12)
     ], className="mt-4")
 ], fluid=True, style={'backgroundColor': '#1a1a1a'})
 
-# ========== CALLBACKS AVANZADOS ==========
+# ========== FUNCIONES DE ANÁLISIS ==========
+def calculate_risk_score(df):
+    """Calcula score de riesgo basado en múltiples factores"""
+    risk_factors = 0
+    if df['Glucose'].mean() > 140: risk_factors += 1
+    if df['BMI'].mean() > 30: risk_factors += 1
+    if df['Age'].mean() > 50: risk_factors += 1
+    if df['Outcome'].mean() > 0.5: risk_factors += 1
+    return (risk_factors / 4) * 100
+
+def create_glucose_groups(df):
+    """Crea grupos de glucosa para análisis"""
+    conditions = [
+        (df['Glucose'] < 100),
+        (df['Glucose'] < 126),
+        (df['Glucose'] >= 126)
+    ]
+    choices = ['Normal', 'Prediabetes', 'Diabetes']
+    return np.select(conditions, choices)
+
+# ========== CALLBACKS ==========
 @app.callback(
     [Output("live-update-time", "children"),
      Output("total-patients", "children"),
@@ -288,12 +316,7 @@ app.layout = dbc.Container([
      Output("diabetes-rate", "children"),
      Output("avg-glucose", "children"),
      Output("avg-bmi", "children"),
-     Output("risk-score", "children"),
-     Output("progress-cases", "value"),
-     Output("progress-risk", "value"),
-     Output("trend-indicator", "children"),
-     Output("glucose-status", "children"),
-     Output("bmi-status", "children")],
+     Output("risk-score", "children")],
     [Input("update-btn", "n_clicks"),
      Input("age-slider", "value"),
      Input("glucose-slider", "value"),
@@ -318,18 +341,7 @@ def update_kpis(n_clicks, age_range, glucose_range, bmi_range, outcome_filter):
     diabetes_rate = (diabetes_cases / total_patients * 100) if total_patients > 0 else 0
     avg_glucose = filtered_df['Glucose'].mean()
     avg_bmi = filtered_df['BMI'].mean()
-    
-    # Score de riesgo (algoritmo simple)
-    risk_factors = 0
-    if avg_glucose > 140: risk_factors += 1
-    if avg_bmi > 30: risk_factors += 1
-    if diabetes_rate > 50: risk_factors += 1
-    risk_score = (risk_factors / 3) * 100
-    
-    # Indicadores de tendencia
-    trend = "🟢 Estable" if diabetes_rate < 30 else "🟡 Moderado" if diabetes_rate < 60 else "🔴 Alto"
-    glucose_status = "🟢 Normal" if avg_glucose < 100 else "🟡 Elevado" if avg_glucose < 126 else "🔴 Peligroso"
-    bmi_status = "🟢 Saludable" if avg_bmi < 25 else "🟡 Sobrepeso" if avg_bmi < 30 else "🔴 Obesidad"
+    risk_score = calculate_risk_score(filtered_df)
     
     return (
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -338,20 +350,15 @@ def update_kpis(n_clicks, age_range, glucose_range, bmi_range, outcome_filter):
         f"{diabetes_rate:.1f}%",
         f"{avg_glucose:.1f}",
         f"{avg_bmi:.1f}",
-        f"{risk_score:.0f}%",
-        diabetes_rate,
-        risk_score,
-        trend,
-        glucose_status,
-        bmi_status
+        f"{risk_score:.0f}%"
     )
 
 @app.callback(
     [Output("distribution-plot", "figure"),
      Output("correlation-plot", "figure"),
-     Output("scatter-matrix", "figure"),
+     Output("group-analysis", "figure"),
      Output("box-plot", "figure"),
-     Output("probability-plot", "figure")],
+     Output("scatter-plot", "figure")],
     [Input("update-btn", "n_clicks")],
     [State("age-slider", "value"),
      State("glucose-slider", "value"),
@@ -387,7 +394,7 @@ def update_advanced_charts(n_clicks, age_range, glucose_range, bmi_range, outcom
     
     dist_fig.update_layout(height=600, showlegend=False, template="plotly_dark")
     
-    # 2. MAPA DE CORRELACIÓN 3D
+    # 2. MAPA DE CORRELACIÓN
     corr_matrix = filtered_df.corr()
     corr_fig = go.Figure(data=go.Heatmap(
         z=corr_matrix.values,
@@ -406,21 +413,29 @@ def update_advanced_charts(n_clicks, age_range, glucose_range, bmi_range, outcom
         template="plotly_dark"
     )
     
-    # 3. MATRIZ DE DISPERSIÓN
-    scatter_fig = px.scatter_matrix(
-        filtered_df,
-        dimensions=['Age', 'Glucose', 'BMI', 'BloodPressure'],
-        color='Outcome',
-        title="Matriz de Dispersión Multivariable",
-        template="plotly_dark"
-    )
-    scatter_fig.update_layout(height=500)
+    # 3. ANÁLISIS POR GRUPOS
+    if group_by == 'Glucose_Group':
+        filtered_df['Group'] = create_glucose_groups(filtered_df)
+        group_fig = px.sunburst(
+            filtered_df, 
+            path=['Group', 'Outcome'], 
+            title="Análisis por Grupos de Glucosa"
+        )
+    else:
+        group_fig = px.pie(
+            filtered_df, 
+            names=group_by, 
+            title=f"Distribución por {group_by}",
+            template="plotly_dark"
+        )
     
-    # 4. BOX PLOTS AVANZADOS
+    group_fig.update_layout(height=400)
+    
+    # 4. BOX PLOTS
     box_fig = go.Figure()
-    
     variables = ['Glucose', 'BMI', 'BloodPressure', 'Age']
-    for i, var in enumerate(variables):
+    
+    for var in variables:
         box_fig.add_trace(go.Box(
             y=filtered_df[var],
             name=var,
@@ -436,20 +451,21 @@ def update_advanced_charts(n_clicks, age_range, glucose_range, bmi_range, outcom
         showlegend=False
     )
     
-    # 5. GRÁFICO DE PROBABILIDAD
-    prob_fig = px.histogram(
-        filtered_df, 
-        x="Glucose", 
-        color="Outcome", 
-        marginal="box",
-        title="Distribución de Glucosa por Resultado",
-        template="plotly_dark",
-        barmode="overlay",
-        opacity=0.7
+    # 5. SCATTER PLOT
+    scatter_fig = px.scatter(
+        filtered_df,
+        x='Age',
+        y='Glucose',
+        color='Outcome',
+        size='BMI',
+        hover_data=['BloodPressure', 'Insulin'],
+        title="Edad vs Glucosa (tamaño por IMC)",
+        template="plotly_dark"
     )
-    prob_fig.update_layout(height=400)
     
-    return dist_fig, corr_fig, scatter_fig, box_fig, prob_fig
+    scatter_fig.update_layout(height=400)
+    
+    return dist_fig, corr_fig, group_fig, box_fig, scatter_fig
 
 @app.callback(
     [Output("stats-summary", "children"),
@@ -471,14 +487,16 @@ def update_stats_and_table(n_clicks, age_range, glucose_range, bmi_range):
         html.H5("📈 Resumen Estadístico", className="text-white"),
         html.P(f"📊 Total de registros: {len(filtered_df)}", className="text-light"),
         html.P(f"🎯 Media de glucosa: {filtered_df['Glucose'].mean():.2f}", className="text-light"),
-        html.P(f"📏 Desviación estándar: {filtered_df['Glucose'].std():.2f}", className="text-light"),
+        html.P(f"📏 Desviación estándar glucosa: {filtered_df['Glucose'].std():.2f}", className="text-light"),
         html.P(f"📈 Correlación glucosa-IMC: {filtered_df['Glucose'].corr(filtered_df['BMI']):.3f}", className="text-light"),
         html.P(f"🩺 Tasa de diabetes: {(filtered_df['Outcome'].mean()*100):.1f}%", className="text-light"),
+        html.P(f"📋 Edad promedio: {filtered_df['Age'].mean():.1f} años", className="text-light"),
     ]
     
-    # Tabla de datos
+    # Tabla de datos (primeras 8 filas)
+    table_data = filtered_df.head(8).round(2)
     table = dbc.Table.from_dataframe(
-        filtered_df.head(10).round(2),
+        table_data,
         striped=True,
         bordered=True,
         hover=True,
@@ -489,18 +507,17 @@ def update_stats_and_table(n_clicks, age_range, glucose_range, bmi_range):
     return stats_text, table
 
 # ========== EJECUCIÓN ==========
-# === CONFIGURACIÓN PARA RAILWAY ===
 if __name__ == '__main__':
-    # Para desarrollo local
-    debug_mode = os.environ.get('RAILWAY_ENVIRONMENT') != 'production'
-    port = int(os.environ.get("PORT", 8050))
-    
-    print("🚀 Iniciando servidor Dash...")
-    print(f"🌐 Entorno: {'Producción' if not debug_mode else 'Desarrollo'}")
-    print(f"🔗 Puerto: {port}")
-    print(f"📊 URL: http://0.0.0.0:{port}")
-    
-    app.run(
+    print("🚀 Iniciando Dashboard Médico Avanzado...")
+    print("📊 Características incluidas:")
+    print("   ✅ Tema oscuro profesional")
+    print("   ✅ KPIs en tiempo real")
+    print("   ✅ Filtros avanzados interactivos")
+    print("   ✅ Múltiples visualizaciones")
+    print("   ✅ Análisis estadístico completo")
+    print("   ✅ Tabla de datos interactiva")
+    print("🌐 Abre: http://0.0.0.0:8050")
+    app.run(host='0.0.0.0', port=8050, debug=False)
         host='0.0.0.0',
         port=port,
         debug=debug_mode
