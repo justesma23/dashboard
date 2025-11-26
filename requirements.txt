@@ -1,7 +1,6 @@
-dash==2.14.1
-pandas==1.5.3
-plotly==5.15.0
-dash-bootstrap-components==1.5.0
-flask==2.2.5
-numpy==1.24.3
-Werkzeug==2.2.3
+dash
+dash-bootstrap-components
+plotly
+pandas==2.1.4
+numpy==1.26.4
+gunicorn
